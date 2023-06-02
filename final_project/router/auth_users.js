@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 let books = require("./booksdb.js");
 const regd_users = express.Router();
 
-let users = [];
+let users = [{"username": "user", "password": "pass"}];
 
 const isValid = (username)=>{ //returns boolean
     return users.some((user) => user.username === username);
@@ -37,9 +37,39 @@ regd_users.post("/login", (req,res) => {
 });
 
 // Add a book review
+// You have to give a review as a request query & it must get posted with the username (stored in the session) posted.
+// If the same user posts a different review on the same ISBN, it should modify the existing review.
+// If another user logs in and posts a review on the same ISBN, it will get added as a different review under the same ISBN.
 regd_users.put("/auth/review/:isbn", (req, res) => {
-  //Write your code here
-  return res.status(300).json({message: "Yet to be implemented"});
+    let isbn = req.params.isbn;
+    let book = books[isbn];
+    let username = req.session.authorization["username"];
+
+    if (book) {
+        let review = req.query.review;
+        if (review) {
+            book.reviews[username] = review;
+            return res.send("Review added successfully.");
+        } else {
+            return res.status(400).json({message: "No review submitted."});
+        }
+    } else {
+        return res.status(404).json({message: `Book with ISBN ${isbn} not found.`});
+    }
+});
+
+// Delete a book review
+regd_users.delete("/auth/review/:isbn", (req, res) => {
+    let isbn = req.params.isbn;
+    let book = books[isbn];
+    let username = req.session.authorization["username"];
+
+    if (book) {
+        delete book.reviews[username];
+        return res.send("Review deleted successfully.");
+    } else {
+        return res.status(404).json({message: `Book with ISBN ${isbn} not found.`});
+    }
 });
 
 module.exports.authenticated = regd_users;
